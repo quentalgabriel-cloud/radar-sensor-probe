@@ -26,8 +26,11 @@ public final class DiagnosticExporter {
             out.put("snapshots", sanitized);
             out.put("privacy_note", "Conteudo textual e identificadores humanos foram substituidos por placeholders; a estrutura tecnica foi preservada.");
         } catch (Exception ignored) { }
-        return out.toString(2);
-    }
+try {
+    return out.toString(2);
+} catch (org.json.JSONException e) {
+    return out.toString();
+}    }
 
     private static JSONObject appInfo(Context c) {
         JSONObject o = new JSONObject();
@@ -53,8 +56,12 @@ public final class DiagnosticExporter {
     }
 
     private static JSONObject sanitizeSnapshot(JSONObject source, int index) {
-        JSONObject copy = new JSONObject(source.toString());
-        try {
+JSONObject copy;
+try {
+    copy = new JSONObject(source.toString());
+} catch (org.json.JSONException e) {
+    copy = new JSONObject();
+}        try {
             copy.put("conversation_label", pseudonym("GROUP", source.optString("conversation_label")));
             JSONObject raw = copy.optJSONObject("raw");
             if (raw != null) sanitizeObject(raw);
