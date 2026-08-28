@@ -2,6 +2,13 @@ plugins {
     id 'com.android.application'
 }
 
+def signingReady = [
+        System.getenv('RADAR_KEYSTORE_PATH'),
+        System.getenv('RADAR_KEYSTORE_PASSWORD'),
+        System.getenv('RADAR_KEY_ALIAS'),
+        System.getenv('RADAR_KEY_PASSWORD')
+].every { it != null && !it.isBlank() }
+
 android {
     namespace 'br.com.radardarede.sensor'
     compileSdk 35
@@ -10,8 +17,19 @@ android {
         applicationId 'br.com.radardarede.sensor'
         minSdk 28
         targetSdk 35
-        versionCode 1
-        versionName '0.1.0-probe'
+        versionCode 2
+        versionName '0.2.0-probe'
+    }
+
+    signingConfigs {
+        release {
+            if (signingReady) {
+                storeFile file(System.getenv('RADAR_KEYSTORE_PATH'))
+                storePassword System.getenv('RADAR_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('RADAR_KEY_ALIAS')
+                keyPassword System.getenv('RADAR_KEY_PASSWORD')
+            }
+        }
     }
 
     buildTypes {
@@ -21,6 +39,7 @@ android {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (signingReady) signingConfig signingConfigs.release
         }
     }
 

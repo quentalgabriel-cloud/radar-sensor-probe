@@ -12,6 +12,9 @@ import org.json.JSONObject;
 public final class ProbeDatabase extends SQLiteOpenHelper {
     private static final String DB_NAME = "radar_probe.db";
     private static final int DB_VERSION = 1;
+    private static final int MAX_SNAPSHOTS = 500;
+    private static final int MAX_INCIDENTS = 500;
+    private static final long RETENTION_MS = 7L * 24L * 60L * 60L * 1000L;
     private static volatile ProbeDatabase instance;
 
     public static ProbeDatabase get(Context context) {
@@ -54,7 +57,10 @@ public final class ProbeDatabase extends SQLiteOpenHelper {
         v.put("conversation_label", conversationLabel);
         v.put("message_count", messageCount);
         v.put("raw_json", rawJson);
-        return getWritableDatabase().insertWithOnConflict("snapshots", null, v, SQLiteDatabase.CONFLICT_IGNORE);
+        SQLiteDatabase db = getWritableDatabase();
+        long row = db.insertWithOnConflict("snapshots", null, v, SQLiteDatabase.CONFLICT_IGNORE);
+        if (row != -1) prune(db, System.currentTimeMillis());
+        return row;
     }
 
     public void addIncident(String type, String detail) {
@@ -112,5 +118,12 @@ public final class ProbeDatabase extends SQLiteOpenHelper {
         SQLiteDatabase db = getWritableDatabase();
         db.delete("snapshots", null, null);
         db.delete("incidents", null, null);
+    }
+
+    private void prune(SQLiteDatabase db, long now) {
+        db.delete("snapshots", "captured_at < ?", new String[]{String.valueOf(now - RETENTION_MS)});
+        db.delete("incidents", "occurred_at < ?", new String[]{String.valueOf(now - RETENTION_MS)});
+        db.execSQL("DELETE FROM snapshots WHERE id NOT IN (SELECT id FROM snapshots ORDER BY captured_at DESC LIMIT " + MAX_SNAPSHOTS + ")");
+        db.execSQL("DELETE FROM incidents WHERE id NOT IN (SELECT id FROM incidents ORDER BY occurred_at DESC LIMIT " + MAX_INCIDENTS + ")");
     }
 }

@@ -19,6 +19,7 @@ import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -38,6 +39,7 @@ public class MainActivity extends Activity {
     private static final int EXPORT_REQUEST = 404;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private TextView captureStatus, accessStatus, listenerStatus, whatsappStatus, testStatus, recentEvents, probeCount;
+    private Button grantAccessButton;
     private String pendingExport;
 
     private final Runnable refreshLoop = new Runnable() {
@@ -64,7 +66,22 @@ public class MainActivity extends Activity {
     private View buildUi() {
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
+        scroll.setClipToPadding(false);
         scroll.setBackgroundColor(Color.rgb(255,253,252));
+        scroll.setOnApplyWindowInsetsListener((view, insets) -> {
+            int top;
+            int bottom;
+            if (Build.VERSION.SDK_INT >= 30) {
+                android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
+                top = bars.top;
+                bottom = bars.bottom;
+            } else {
+                top = insets.getSystemWindowInsetTop();
+                bottom = insets.getSystemWindowInsetBottom();
+            }
+            view.setPadding(0, top, 0, bottom);
+            return insets;
+        });
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(20), dp(24), dp(20), dp(40));
@@ -93,17 +110,17 @@ public class MainActivity extends Activity {
         statusCard.addView(probeCount);
         root.addView(statusCard);
 
-        Button grant = primaryButton("Permitir acesso às notificações");
-        grant.setOnClickListener(v -> openNotificationAccess());
-        root.addView(grant, spaced());
+        grantAccessButton = primaryButton("Permitir acesso às notificações");
+        grantAccessButton.setOnClickListener(v -> openNotificationAccess());
+        root.addView(grantAccessButton, spaced());
 
         Button settings = secondaryButton("Configurações do app / bateria");
         settings.setOnClickListener(v -> openAppSettings());
         root.addView(settings, spacedSmall());
 
         LinearLayout testCard = card();
-        testCard.addView(sectionLabel("TESTE DE CAPTURA"));
-        testStatus = text("Pronto para iniciar um teste end-to-end local.", 15, Color.rgb(33,29,29), false);
+        testCard.addView(sectionLabel("TESTE LOCAL DE CAPTURA"));
+        testStatus = text("Pronto para verificar a chegada de uma notificação ao armazenamento local.", 15, Color.rgb(33,29,29), false);
         testStatus.setPadding(0, dp(8), 0, dp(10));
         testCard.addView(testStatus);
         Button test = primaryButton("Iniciar teste");
@@ -136,7 +153,7 @@ public class MainActivity extends Activity {
         });
         root.addView(clear, spacedSmall());
 
-        TextView footer = text("V0.1 • Os snapshots ficam no armazenamento interno do app. O export remove conteúdo textual e pseudonimiza identificadores humanos.", 12, Color.rgb(111,102,102), false);
+        TextView footer = text("V0.2 • Esta versão observa snapshots locais; ainda não interpreta nem envia mensagens ao Radar. O diagnóstico remove conteúdo textual e pseudonimiza identificadores.", 12, Color.rgb(111,102,102), false);
         footer.setPadding(0, dp(24), 0, 0);
         root.addView(footer);
         return scroll;
@@ -152,6 +169,7 @@ public class MainActivity extends Activity {
         accessStatus.setText("Acesso às notificações   " + (access ? "✓ Ativo" : "✕ Pendente"));
         listenerStatus.setText("Sensor                    " + (listener ? "✓ Conectado" : "• Aguardando"));
         whatsappStatus.setText("WhatsApp                  " + (whatsapp ? (last > 0 ? "✓ Atividade detectada" : "✓ Instalado") : "✕ Não encontrado"));
+        grantAccessButton.setText(access ? "Revisar acesso às notificações" : "Permitir acesso às notificações");
         probeCount.setText(count + (count == 1 ? " snapshot local" : " snapshots locais"));
 
         if (!access) {
@@ -164,7 +182,7 @@ public class MainActivity extends Activity {
             captureStatus.setText("Pronto para testar");
             captureStatus.setTextColor(Color.rgb(35,122,75));
         } else {
-            captureStatus.setText("Captura observada");
+            captureStatus.setText("Captura local observada");
             captureStatus.setTextColor(Color.rgb(35,122,75));
         }
 
@@ -172,9 +190,9 @@ public class MainActivity extends Activity {
             testStatus.setText("Aguardando… envie agora uma mensagem para um dos grupos monitorados. Iniciado " + time(HealthStore.testStarted(this)) + ".");
         } else if (HealthStore.testPassed(this) > 0) {
             long latency = HealthStore.testPassed(this) - HealthStore.testStarted(this);
-            testStatus.setText("✓ Teste passou. Notificação do WhatsApp observada em ~" + Math.max(0, latency/1000.0) + "s.");
+            testStatus.setText("✓ Captura local confirmada. Notificação observada em ~" + Math.max(0, latency/1000.0) + "s.");
         } else {
-            testStatus.setText("Pronto para iniciar um teste. O teste passa quando uma nova notificação do WhatsApp é observada.");
+            testStatus.setText("Pronto para iniciar. O teste confirma somente a chegada de uma nova notificação ao armazenamento local.");
         }
 
         JSONArray items = ProbeDatabase.get(this).recentSnapshots(8);
@@ -187,7 +205,7 @@ public class MainActivity extends Activity {
               .append(empty(o.optString("conversation_label")) ? "Conversa não identificada" : o.optString("conversation_label"))
               .append("\n")
               .append(o.optInt("message_count", 0)).append(" mensagens no payload")
-              .append("  •  ").append(shortKey(o.optString("notification_key")));
+              .append("  •  snapshot local");
         }
         recentEvents.setText(sb.length() == 0 ? "Nenhuma notificação do WhatsApp observada ainda." : sb.toString());
     }
@@ -282,5 +300,4 @@ public class MainActivity extends Activity {
     private int dp(int v) { return Math.round(v * getResources().getDisplayMetrics().density); }
     private String time(long ms) { return ms <= 0 ? "—" : new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date(ms)); }
     private boolean empty(String s) { return TextUtils.isEmpty(s) || "null".equalsIgnoreCase(s); }
-    private String shortKey(String key) { if (empty(key)) return "sem chave"; return key.length() > 18 ? key.substring(0, 18) + "…" : key; }
 }
