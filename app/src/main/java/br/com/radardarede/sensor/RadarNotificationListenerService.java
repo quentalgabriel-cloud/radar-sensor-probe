@@ -1,6 +1,8 @@
 package br.com.radardarede.sensor;
 
 import android.content.ComponentName;
+import android.os.Handler;
+import android.os.Looper;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 
@@ -8,17 +10,28 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class RadarNotificationListenerService extends NotificationListenerService {
+    private static final long HEARTBEAT_INTERVAL_MS = 60_000L;
     private final ExecutorService io = Executors.newSingleThreadExecutor();
+    private final Handler heartbeatHandler = new Handler(Looper.getMainLooper());
+    private final Runnable heartbeat = new Runnable() {
+        @Override public void run() {
+            HealthStore.listenerHeartbeat(RadarNotificationListenerService.this);
+            heartbeatHandler.postDelayed(this, HEARTBEAT_INTERVAL_MS);
+        }
+    };
 
     @Override public void onListenerConnected() {
         super.onListenerConnected();
         HealthStore.listenerConnected(this, true);
+        heartbeatHandler.removeCallbacks(heartbeat);
+        heartbeatHandler.post(heartbeat);
         ProbeDatabase.get(this).addIncident("LISTENER_CONNECTED", null);
         recoverActiveNotifications();
     }
 
     @Override public void onListenerDisconnected() {
         HealthStore.listenerConnected(this, false);
+        heartbeatHandler.removeCallbacks(heartbeat);
         ProbeDatabase.get(this).addIncident("LISTENER_DISCONNECTED", null);
         try { requestRebind(new ComponentName(this, RadarNotificationListenerService.class)); }
         catch (Exception ignored) { }
@@ -57,7 +70,7 @@ public class RadarNotificationListenerService extends NotificationListenerServic
             long row = db.insertSnapshot(r.snapshotId, r.capturedAt, r.notificationKey, r.conversationLabel, r.messageCount, r.json);
             HealthStore.whatsappObserved(this, r.capturedAt);
             if (row != -1) {
-                HealthStore.parsedEvent(this, r.capturedAt);
+                HealthStore.snapshotStored(this, r.capturedAt);
                 HealthStore.maybePassTest(this, r.capturedAt);
             }
             if (recovered) db.addIncident("ACTIVE_SNAPSHOT_RECOVERED", r.notificationKey);
@@ -65,6 +78,8 @@ public class RadarNotificationListenerService extends NotificationListenerServic
     }
 
     @Override public void onDestroy() {
+        heartbeatHandler.removeCallbacks(heartbeat);
+        HealthStore.listenerConnected(this, false);
         io.shutdown();
         super.onDestroy();
     }
