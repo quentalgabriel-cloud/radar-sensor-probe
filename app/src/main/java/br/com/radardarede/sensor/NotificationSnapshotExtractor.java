@@ -78,7 +78,8 @@ public final class NotificationSnapshotExtractor {
             catch (Exception ignored) { }
         }
         String snapshotId = root.optString("snapshot_id", UUID.randomUUID().toString());
-        return new Result(snapshotId, capturedAt, sbn.getKey(), conversation, messages.length(), root.toString());
+        return new Result(snapshotId, capturedAt, sbn.getKey(), conversation, messages.length(),
+                latestMessageAt(messages), root.toString());
     }
 
     private static void parseBundleArray(JSONArray out, Parcelable[] array) {
@@ -123,16 +124,28 @@ public final class NotificationSnapshotExtractor {
     }
     private static String stringValue(Object value) { return value == null ? null : String.valueOf(value); }
 
+    private static long latestMessageAt(JSONArray messages) {
+        long latest = 0L;
+        for (int i = 0; i < messages.length(); i++) {
+            JSONObject message = messages.optJSONObject(i);
+            if (message != null) latest = Math.max(latest, message.optLong("time", 0L));
+        }
+        return latest;
+    }
+
     public static final class Result {
         public final String snapshotId;
         public final long capturedAt;
         public final String notificationKey;
         public final String conversationLabel;
         public final int messageCount;
+        public final long latestMessageAt;
         public final String json;
-        Result(String snapshotId, long capturedAt, String notificationKey, String conversationLabel, int messageCount, String json) {
+        Result(String snapshotId, long capturedAt, String notificationKey, String conversationLabel,
+               int messageCount, long latestMessageAt, String json) {
             this.snapshotId = snapshotId; this.capturedAt = capturedAt; this.notificationKey = notificationKey;
-            this.conversationLabel = conversationLabel; this.messageCount = messageCount; this.json = json;
+            this.conversationLabel = conversationLabel; this.messageCount = messageCount;
+            this.latestMessageAt = latestMessageAt; this.json = json;
         }
     }
 }

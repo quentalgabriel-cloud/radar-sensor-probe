@@ -56,7 +56,7 @@ jobs:
           echo "RADAR_KEYSTORE_PATH=$RUNNER_TEMP/radar-sensor-release.jks" >> "$GITHUB_ENV"
 
       - name: Build signed release APK
-        run: gradle --no-daemon :app:lintRelease :app:assembleRelease
+        run: gradle --no-daemon :app:testReleaseUnitTest :app:lintRelease :app:assembleRelease
 
       - name: Verify signature and prepare release files
         run: |

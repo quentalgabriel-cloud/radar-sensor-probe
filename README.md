@@ -1,4 +1,4 @@
-# Radar Sensor Probe v0.2
+# Radar Sensor Probe v0.2.1
 
 APK experimental do **Radar da Rede** para observar, registrar e validar como o WhatsApp oficial publica notificações no Moto G84.
 
@@ -12,6 +12,7 @@ APK experimental do **Radar da Rede** para observar, registrar e validar como o 
 - limita a retenção local a sete dias, 500 snapshots e 500 incidentes recentes;
 - mostra estado do acesso às notificações, listener e atividade do WhatsApp;
 - executa teste local de captura sem afirmar que houve interpretação ou sincronização;
+- só conclui o teste com payload de mensagem recente, ignorando notificações auxiliares e recuperações antigas;
 - tenta recuperar snapshots ainda ativos quando o listener reconecta;
 - exporta diagnóstico **sanitizado** em JSON;
 - não envia mensagens, não usa WhatsApp Web, não lê contatos e não acessa o banco do WhatsApp.
@@ -20,7 +21,7 @@ APK experimental do **Radar da Rede** para observar, registrar e validar como o 
 
 Esta é uma **Probe build**. O objetivo é aprender como o Moto G84 + versão atual do WhatsApp se comportam antes de consolidar deduplicação, parser final e sincronização Supabase.
 
-A primeira observação física confirmou que notificações detalhadas podem carregar payload cumulativo e que uma mesma atividade pode gerar callbacks auxiliares. Por isso, esta versão continua deliberadamente sem emitir `NormalizedEvent`.
+As observações no Moto G84 e em um Samsung SM-A075M confirmaram que notificações detalhadas podem carregar payload cumulativo, snapshots antigos podem reaparecer após reconexão e uma mesma atividade pode gerar callbacks auxiliares. Por isso, esta versão continua deliberadamente sem emitir `NormalizedEvent`.
 
 ## Build local
 

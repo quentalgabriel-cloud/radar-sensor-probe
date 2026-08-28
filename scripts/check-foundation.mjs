@@ -16,12 +16,14 @@ const activity = read('app/src/main/java/br/com/radardarede/sensor/MainActivity.
 const exporter = read('app/src/main/java/br/com/radardarede/sensor/DiagnosticExporter.java');
 const releaseWorkflow = read('.github/workflows/release-apk.yml');
 
-requireMatch(gradle, /versionCode\s+2\b/, 'versionCode da v0.2 deve ser 2.');
-requireMatch(gradle, /versionName\s+'0\.2\.0-probe'/, 'versionName deve identificar a v0.2 probe.');
+requireMatch(gradle, /versionCode\s+3\b/, 'versionCode da v0.2.1 deve ser 3.');
+requireMatch(gradle, /versionName\s+'0\.2\.1-probe'/, 'versionName deve identificar a v0.2.1 probe.');
 requireMatch(gradle, /RADAR_KEYSTORE_PATH/, 'Build de release deve aceitar a chave permanente.');
 
 rejectMatch(health + listener, /parsedEvent|last_parsed_event/, 'Snapshot bruto não pode ser chamado de evento interpretado.');
 requireMatch(listener, /HEARTBEAT_INTERVAL_MS\s*=\s*60_000L/, 'Listener deve publicar heartbeat local a cada 60 segundos.');
+requireMatch(listener, /r\.latestMessageAt, recovered/, 'Teste local deve receber evidência temporal e origem do snapshot.');
+requireMatch(health, /CaptureTestEvaluator\.shouldPass/, 'HealthStore deve centralizar o critério do teste local.');
 requireMatch(activity, /TESTE LOCAL DE CAPTURA/, 'A UI deve identificar o teste como local.');
 rejectMatch(activity, /Teste passou/, 'A UI não pode prometer teste ponta a ponta nesta versão.');
 rejectMatch(activity, /shortKey|optString\("notification_key"\)/, 'A tela não deve expor a chave técnica da notificação.');
@@ -40,9 +42,9 @@ requireMatch(releaseWorkflow, /apksigner" verify/, 'Workflow deve verificar a as
 requireMatch(releaseWorkflow, /gh release create/, 'Workflow deve publicar uma GitHub Release.');
 
 if (failures.length) {
-  console.error('Falha na fundação da v0.2:');
+  console.error('Falha na fundação da v0.2.1:');
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
 
-console.log('Fundação da v0.2 validada.');
+console.log('Fundação da v0.2.1 validada.');
