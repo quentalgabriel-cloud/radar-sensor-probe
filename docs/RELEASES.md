@@ -37,8 +37,8 @@ ANDROID_KEY_PASSWORD
 Exemplo:
 
 ```bash
-git tag v0.2.0-probe
-git push origin v0.2.0-probe
+git tag v0.2.1-probe
+git push origin v0.2.1-probe
 ```
 
 O workflow valida versão e secrets, compila, verifica a assinatura e publica APK + checksum SHA-256 em uma GitHub Release.

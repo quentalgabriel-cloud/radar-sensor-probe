@@ -71,7 +71,7 @@ public class RadarNotificationListenerService extends NotificationListenerServic
             HealthStore.whatsappObserved(this, r.capturedAt);
             if (row != -1) {
                 HealthStore.snapshotStored(this, r.capturedAt);
-                HealthStore.maybePassTest(this, r.capturedAt);
+                HealthStore.maybePassTest(this, r.capturedAt, r.messageCount, r.latestMessageAt, recovered);
             }
             if (recovered) db.addIncident("ACTIVE_SNAPSHOT_RECOVERED", r.notificationKey);
         });

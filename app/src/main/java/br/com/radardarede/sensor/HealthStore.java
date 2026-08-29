@@ -37,12 +37,18 @@ public final class HealthStore {
     public static long lastWhatsapp(Context c) { return p(c).getLong("last_whatsapp_notification_at", 0L); }
     public static void startTest(Context c) {
         p(c).edit().putBoolean("test_waiting", true).putLong("test_started_at", System.currentTimeMillis())
-                .remove("test_passed_at").apply();
+                .remove("test_passed_at").remove("test_evidence_at").apply();
     }
-    public static void maybePassTest(Context c, long eventAt) {
+    public static void maybePassTest(Context c, long eventAt, int messageCount,
+                                     long latestMessageAt, boolean recovered) {
         SharedPreferences pref = p(c);
-        if (pref.getBoolean("test_waiting", false) && eventAt >= pref.getLong("test_started_at", Long.MAX_VALUE)) {
-            pref.edit().putBoolean("test_waiting", false).putLong("test_passed_at", eventAt).apply();
+        long startedAt = pref.getLong("test_started_at", 0L);
+        if (CaptureTestEvaluator.shouldPass(pref.getBoolean("test_waiting", false), startedAt,
+                eventAt, messageCount, latestMessageAt, recovered)) {
+            pref.edit().putBoolean("test_waiting", false)
+                    .putLong("test_passed_at", eventAt)
+                    .putLong("test_evidence_at", latestMessageAt)
+                    .apply();
         }
     }
     public static boolean isTestWaiting(Context c) { return p(c).getBoolean("test_waiting", false); }
@@ -63,6 +69,7 @@ public final class HealthStore {
             o.put("test_waiting", pref.getBoolean("test_waiting", false));
             o.put("test_started_at", pref.getLong("test_started_at", 0L));
             o.put("test_passed_at", pref.getLong("test_passed_at", 0L));
+            o.put("test_evidence_at", pref.getLong("test_evidence_at", 0L));
         } catch (Exception ignored) { }
         return o;
     }

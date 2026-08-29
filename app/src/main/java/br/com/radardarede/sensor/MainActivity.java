@@ -153,7 +153,7 @@ public class MainActivity extends Activity {
         });
         root.addView(clear, spacedSmall());
 
-        TextView footer = text("V0.2 • Esta versão observa snapshots locais; ainda não interpreta nem envia mensagens ao Radar. O diagnóstico remove conteúdo textual e pseudonimiza identificadores.", 12, Color.rgb(111,102,102), false);
+        TextView footer = text("V0.2.1 • Esta versão observa snapshots locais; ainda não interpreta nem envia mensagens ao Radar. O diagnóstico remove conteúdo textual e pseudonimiza identificadores.", 12, Color.rgb(111,102,102), false);
         footer.setPadding(0, dp(24), 0, 0);
         root.addView(footer);
         return scroll;

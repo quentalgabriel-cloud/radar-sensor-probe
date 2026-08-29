@@ -13,6 +13,12 @@ Este documento só deve registrar fatos observados no aparelho.
 - callbacks auxiliares/resumo chegaram sem itens em `EXTRA_MESSAGES`;
 - `EXTRA_CONVERSATION_TITLE` variou com a quantidade acumulada e não deve ser tratado isoladamente como identidade estável;
 - conteúdo textual, timestamp e remetente estavam presentes nos itens detalhados exportados de forma sanitizada.
+- APK `0.2.0-probe` instalado e executado em Samsung SM-A075M com Android 16;
+- listener permaneceu conectado, heartbeat estava recente e o diagnóstico v0.2 não expôs texto, nomes ou identificadores brutos;
+- o Samsung recuperou oito notificações ativas no primeiro vínculo e voltou a publicar snapshots equivalentes depois, confirmando que recuperação/repostagem não pode ser tratada como mensagem nova;
+- durante o teste, uma notificação do canal `other_notifications@1` sem itens em `EXTRA_MESSAGES` chegou 585 ms antes do payload detalhado e encerrou o teste indevidamente;
+- o payload detalhado real chegou aproximadamente 15,5 segundos após o início e continha um item em `EXTRA_MESSAGES`;
+- payloads com imagem expuseram apenas metadado MIME e URI, posteriormente removida pelo sanitizador.
 
 ## INFERRED
 
@@ -20,6 +26,7 @@ Este documento só deve registrar fatos observados no aparelho.
 - o parser candidato deve selecionar snapshots detalhados e emitir apenas o delta ainda não processado;
 - a identidade da conversa deve combinar uma referência técnica estável com um rótulo normalizado para apresentação;
 - callbacks auxiliares e resumos precisam ser classificados antes de qualquer emissão de `NormalizedEvent`.
+- o teste local deve exigir item de mensagem recente e ignorar snapshots recuperados, notificações auxiliares e payloads antigos repostados.
 
 ## UNKNOWN
 
@@ -35,3 +42,4 @@ Este documento só deve registrar fatos observados no aparelho.
 
 - a hipótese “um callback representa uma nova mensagem” foi rejeitada;
 - `last_parsed_event_at` na v0.1 representava snapshot persistido, não evento interpretado.
+- a hipótese “qualquer notificação do pacote WhatsApp prova captura de mensagem” foi rejeitada pelo teste no Samsung.
