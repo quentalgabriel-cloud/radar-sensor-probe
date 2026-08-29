@@ -38,7 +38,7 @@ import java.util.Locale;
 public class MainActivity extends Activity {
     private static final int EXPORT_REQUEST = 404;
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private TextView captureStatus, accessStatus, listenerStatus, whatsappStatus, testStatus, recentEvents, probeCount;
+    private TextView captureStatus, accessStatus, listenerStatus, whatsappStatus, syncStatus, testStatus, recentEvents, probeCount;
     private Button grantAccessButton;
     private String pendingExport;
 
@@ -49,6 +49,8 @@ public class MainActivity extends Activity {
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(buildUi());
+        HealthStore.provisioned(this, SensorConfig.current().isProvisioned());
+        SyncCoordinator.requestSync(this);
         refresh();
     }
 
@@ -89,10 +91,10 @@ public class MainActivity extends Activity {
 
         TextView kicker = text("★  RADAR DA REDE", 13, Color.rgb(198,40,40), true);
         root.addView(kicker);
-        TextView title = text("Sensor Probe", 30, Color.rgb(33,29,29), true);
+        TextView title = text("Radar Sensor", 30, Color.rgb(33,29,29), true);
         title.setPadding(0, dp(4), 0, 0);
         root.addView(title);
-        TextView subtitle = text("Descoberta e validação da captura do WhatsApp no Moto G84.", 15, Color.rgb(111,102,102), false);
+        TextView subtitle = text("Captura e sincronização da rede pelo aparelho oficial.", 15, Color.rgb(111,102,102), false);
         subtitle.setPadding(0, dp(4), 0, dp(18));
         root.addView(subtitle);
 
@@ -109,6 +111,19 @@ public class MainActivity extends Activity {
         probeCount.setPadding(0, dp(10), 0, 0);
         statusCard.addView(probeCount);
         root.addView(statusCard);
+
+        LinearLayout syncCard = card();
+        syncCard.addView(sectionLabel("SINCRONIZAÇÃO"));
+        syncStatus = text("Verificando conexão com o Radar…", 15, Color.rgb(33,29,29), false);
+        syncStatus.setPadding(0, dp(8), 0, dp(8));
+        syncCard.addView(syncStatus);
+        Button syncNow = secondaryButton("Sincronizar agora");
+        syncNow.setOnClickListener(v -> {
+            SyncCoordinator.requestSync(this);
+            Toast.makeText(this, "Sincronização solicitada.", Toast.LENGTH_SHORT).show();
+        });
+        syncCard.addView(syncNow);
+        root.addView(syncCard, spaced());
 
         grantAccessButton = primaryButton("Permitir acesso às notificações");
         grantAccessButton.setOnClickListener(v -> openNotificationAccess());
@@ -145,15 +160,7 @@ public class MainActivity extends Activity {
         export.setOnClickListener(v -> exportDiagnostics());
         root.addView(export, spacedSmall());
 
-        Button clear = secondaryButton("Limpar dados do Probe");
-        clear.setOnClickListener(v -> {
-            ProbeDatabase.get(this).clearProbeData();
-            Toast.makeText(this, "Dados locais do Probe apagados.", Toast.LENGTH_SHORT).show();
-            refresh();
-        });
-        root.addView(clear, spacedSmall());
-
-        TextView footer = text("V0.2.1 • Esta versão observa snapshots locais; ainda não interpreta nem envia mensagens ao Radar. O diagnóstico remove conteúdo textual e pseudonimiza identificadores.", 12, Color.rgb(111,102,102), false);
+        TextView footer = text("V0.3.0 • A captura fica salva antes do envio e se recupera automaticamente após falhas de internet. O diagnóstico compartilhável remove conteúdo textual e pseudonimiza identificadores.", 12, Color.rgb(111,102,102), false);
         footer.setPadding(0, dp(24), 0, 0);
         root.addView(footer);
         return scroll;
@@ -165,12 +172,31 @@ public class MainActivity extends Activity {
         boolean whatsapp = isWhatsAppInstalled();
         long last = HealthStore.lastWhatsapp(this);
         int count = ProbeDatabase.get(this).snapshotCount();
+        int pending = ProbeDatabase.get(this).outboxPendingCount();
 
         accessStatus.setText("Acesso às notificações   " + (access ? "✓ Ativo" : "✕ Pendente"));
         listenerStatus.setText("Sensor                    " + (listener ? "✓ Conectado" : "• Aguardando"));
         whatsappStatus.setText("WhatsApp                  " + (whatsapp ? (last > 0 ? "✓ Atividade detectada" : "✓ Instalado") : "✕ Não encontrado"));
         grantAccessButton.setText(access ? "Revisar acesso às notificações" : "Permitir acesso às notificações");
         probeCount.setText(count + (count == 1 ? " snapshot local" : " snapshots locais"));
+
+        if (!SensorConfig.current().isProvisioned()) {
+            syncStatus.setText("Build de validação local — conexão com o Radar ainda não configurada.");
+            syncStatus.setTextColor(Color.rgb(154,103,0));
+        } else if (pending > 0) {
+            syncStatus.setText(pending + (pending == 1 ? " envio aguardando. " : " envios aguardando. ")
+                    + "O aparelho tentará novamente automaticamente.");
+            syncStatus.setTextColor(Color.rgb(154,103,0));
+        } else if (HealthStore.lastUploadSucceeded(this) > 0) {
+            syncStatus.setText("✓ Dados enviados ao Radar. Último envio: " + time(HealthStore.lastUploadSucceeded(this)) + ".");
+            syncStatus.setTextColor(Color.rgb(35,122,75));
+        } else if (HealthStore.lastUploadError(this) != null) {
+            syncStatus.setText("Conexão pendente. O sensor continuará tentando automaticamente.");
+            syncStatus.setTextColor(Color.rgb(154,103,0));
+        } else {
+            syncStatus.setText("Conectado e pronto para enviar a próxima atividade observada.");
+            syncStatus.setTextColor(Color.rgb(35,122,75));
+        }
 
         if (!access) {
             captureStatus.setText("Configuração necessária");

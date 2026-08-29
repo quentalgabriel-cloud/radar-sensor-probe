@@ -20,6 +20,7 @@ public final class DiagnosticExporter {
             out.put("device", deviceInfo());
             out.put("health", HealthStore.asJson(context));
             out.put("snapshot_count", ProbeDatabase.get(context).snapshotCount());
+            out.put("outbox_pending", ProbeDatabase.get(context).outboxPendingCount());
             out.put("incidents", sanitizeIncidents(ProbeDatabase.get(context).recentIncidents(50)));
 
             JSONArray raw = ProbeDatabase.get(context).recentSnapshots(80);
@@ -44,8 +45,8 @@ public final class DiagnosticExporter {
             String version = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionName;
             out.put("package", context.getPackageName());
             out.put("version", version);
-            out.put("parser_version", "not-implemented");
-            out.put("probe_contract", "0.2.0");
+            out.put("parser_version", SnapshotEventParser.VERSION);
+            out.put("probe_contract", "0.3.0");
         } catch (Exception ignored) { }
         return out;
     }

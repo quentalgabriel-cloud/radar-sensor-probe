@@ -27,6 +27,37 @@ public final class HealthStore {
     public static void snapshotStored(Context c, long at) {
         p(c).edit().putLong("last_snapshot_stored_at", at).apply();
     }
+    public static long lastSnapshot(Context c) { return p(c).getLong("last_snapshot_stored_at", 0L); }
+    public static void provisioned(Context c, boolean value) { p(c).edit().putBoolean("provisioned", value).apply(); }
+    public static boolean isProvisioned(Context c) { return p(c).getBoolean("provisioned", false); }
+    public static void uploadSucceeded(Context c, long at, int count) {
+        SharedPreferences pref = p(c);
+        pref.edit().putLong("last_upload_succeeded_at", at)
+                .putLong("events_uploaded", pref.getLong("events_uploaded", 0L) + count)
+                .remove("last_upload_error").apply();
+    }
+    public static void uploadFailed(Context c, long at, String error) {
+        SharedPreferences pref = p(c);
+        pref.edit().putLong("last_upload_failed_at", at)
+                .putLong("upload_failures", pref.getLong("upload_failures", 0L) + 1L)
+                .putString("last_upload_error", error).apply();
+    }
+    public static void heartbeatAttempted(Context c, long at) { p(c).edit().putLong("last_heartbeat_attempt_at", at).apply(); }
+    public static void heartbeatSucceeded(Context c, long at) { p(c).edit().putLong("last_heartbeat_succeeded_at", at).apply(); }
+    public static void heartbeatFailed(Context c, long at, String error) {
+        p(c).edit().putLong("last_heartbeat_failed_at", at).putString("last_heartbeat_error", error).apply();
+    }
+    public static long lastHeartbeatAttempt(Context c) { return p(c).getLong("last_heartbeat_attempt_at", 0L); }
+    public static long lastUploadSucceeded(Context c) { return p(c).getLong("last_upload_succeeded_at", 0L); }
+    public static long eventsUploaded(Context c) { return p(c).getLong("events_uploaded", 0L); }
+    public static long uploadFailures(Context c) { return p(c).getLong("upload_failures", 0L); }
+    public static String lastUploadError(Context c) { return p(c).getString("last_upload_error", null); }
+    public static String remoteStatus(Context c, int pending) {
+        long failed = p(c).getLong("last_upload_failed_at", 0L);
+        long succeeded = p(c).getLong("last_upload_succeeded_at", 0L);
+        if (pending > 0 || failed > succeeded) return "degraded";
+        return failed > 0 && succeeded > failed ? "offline_recovery" : "healthy";
+    }
     public static boolean isListenerConnected(Context c) {
         SharedPreferences pref = p(c);
         long heartbeat = pref.getLong("listener_heartbeat_at", 0L);
@@ -64,6 +95,13 @@ public final class HealthStore {
             o.put("listener_heartbeat_at", pref.getLong("listener_heartbeat_at", 0L));
             o.put("last_whatsapp_notification_at", pref.getLong("last_whatsapp_notification_at", 0L));
             o.put("last_snapshot_stored_at", pref.getLong("last_snapshot_stored_at", 0L));
+            o.put("provisioned", pref.getBoolean("provisioned", false));
+            o.put("last_upload_succeeded_at", pref.getLong("last_upload_succeeded_at", 0L));
+            o.put("last_upload_failed_at", pref.getLong("last_upload_failed_at", 0L));
+            o.put("last_heartbeat_succeeded_at", pref.getLong("last_heartbeat_succeeded_at", 0L));
+            o.put("events_uploaded", pref.getLong("events_uploaded", 0L));
+            o.put("upload_failures", pref.getLong("upload_failures", 0L));
+            if (pref.contains("last_upload_error")) o.put("last_upload_error", pref.getString("last_upload_error", "unknown"));
             o.put("listener_connected_at", pref.getLong("listener_connected_at", 0L));
             o.put("listener_disconnected_at", pref.getLong("listener_disconnected_at", 0L));
             o.put("test_waiting", pref.getBoolean("test_waiting", false));

@@ -27,7 +27,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate v0.2 foundation
+      - name: Validate v0.3 foundation
         run: node scripts/check-foundation.mjs
 
       - name: Set up Java 17

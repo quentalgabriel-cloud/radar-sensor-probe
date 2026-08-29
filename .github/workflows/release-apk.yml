@@ -15,13 +15,17 @@ jobs:
       RADAR_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       RADAR_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       RADAR_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      RADAR_INGEST_ENDPOINT: ${{ vars.RADAR_INGEST_ENDPOINT }}
+      RADAR_NETWORK_ID: ${{ vars.RADAR_NETWORK_ID }}
+      RADAR_DEVICE_ID: ${{ vars.RADAR_DEVICE_ID }}
+      RADAR_DEVICE_SECRET: ${{ secrets.RADAR_DEVICE_SECRET }}
       GH_TOKEN: ${{ github.token }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate v0.2 foundation
+      - name: Validate v0.3 connected foundation
         run: node scripts/check-foundation.mjs
 
       - name: Set up Java 17
@@ -52,6 +56,10 @@ jobs:
           test -n "$RADAR_KEYSTORE_PASSWORD"
           test -n "$RADAR_KEY_ALIAS"
           test -n "$RADAR_KEY_PASSWORD"
+          test -n "$RADAR_INGEST_ENDPOINT"
+          test -n "$RADAR_NETWORK_ID"
+          test -n "$RADAR_DEVICE_ID"
+          test -n "$RADAR_DEVICE_SECRET"
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/radar-sensor-release.jks"
           echo "RADAR_KEYSTORE_PATH=$RUNNER_TEMP/radar-sensor-release.jks" >> "$GITHUB_ENV"
 
