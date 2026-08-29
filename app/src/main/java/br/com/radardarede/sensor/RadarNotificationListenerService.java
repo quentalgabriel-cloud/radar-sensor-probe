@@ -16,6 +16,7 @@ public class RadarNotificationListenerService extends NotificationListenerServic
     private final Runnable heartbeat = new Runnable() {
         @Override public void run() {
             HealthStore.listenerHeartbeat(RadarNotificationListenerService.this);
+            SyncCoordinator.requestSync(RadarNotificationListenerService.this);
             heartbeatHandler.postDelayed(this, HEARTBEAT_INTERVAL_MS);
         }
     };
@@ -26,6 +27,7 @@ public class RadarNotificationListenerService extends NotificationListenerServic
         heartbeatHandler.removeCallbacks(heartbeat);
         heartbeatHandler.post(heartbeat);
         ProbeDatabase.get(this).addIncident("LISTENER_CONNECTED", null);
+        SyncCoordinator.requestSync(this);
         recoverActiveNotifications();
     }
 
@@ -39,12 +41,12 @@ public class RadarNotificationListenerService extends NotificationListenerServic
     }
 
     @Override public void onNotificationPosted(StatusBarNotification sbn) {
-        if (sbn == null || !"com.whatsapp".equals(sbn.getPackageName())) return;
+        if (sbn == null || !isWhatsApp(sbn.getPackageName())) return;
         persist(sbn, false);
     }
 
     @Override public void onNotificationRemoved(StatusBarNotification sbn) {
-        if (sbn != null && "com.whatsapp".equals(sbn.getPackageName())) {
+        if (sbn != null && isWhatsApp(sbn.getPackageName())) {
             ProbeDatabase.get(this).addIncident("WHATSAPP_NOTIFICATION_REMOVED", sbn.getKey());
         }
     }
@@ -55,7 +57,7 @@ public class RadarNotificationListenerService extends NotificationListenerServic
                 StatusBarNotification[] active = getActiveNotifications();
                 if (active == null) return;
                 for (StatusBarNotification sbn : active) {
-                    if (sbn != null && "com.whatsapp".equals(sbn.getPackageName())) persist(sbn, true);
+                    if (sbn != null && isWhatsApp(sbn.getPackageName())) persist(sbn, true);
                 }
             } catch (Exception ex) {
                 ProbeDatabase.get(this).addIncident("ACTIVE_NOTIFICATION_RECOVERY_FAILED", ex.getMessage());
@@ -67,14 +69,25 @@ public class RadarNotificationListenerService extends NotificationListenerServic
         io.execute(() -> {
             NotificationSnapshotExtractor.Result r = NotificationSnapshotExtractor.extract(sbn);
             ProbeDatabase db = ProbeDatabase.get(this);
-            long row = db.insertSnapshot(r.snapshotId, r.capturedAt, r.notificationKey, r.conversationLabel, r.messageCount, r.json);
+            SensorConfig config = SensorConfig.current();
+            HealthStore.provisioned(this, config.isProvisioned());
+            org.json.JSONArray events = config.isProvisioned()
+                    ? SnapshotEventParser.parse(r.json, config.networkId, config.deviceId)
+                    : new org.json.JSONArray();
+            long row = db.insertSnapshotWithEvents(r.snapshotId, r.capturedAt, r.notificationKey,
+                    r.conversationLabel, r.messageCount, r.json, events);
             HealthStore.whatsappObserved(this, r.capturedAt);
             if (row != -1) {
                 HealthStore.snapshotStored(this, r.capturedAt);
                 HealthStore.maybePassTest(this, r.capturedAt, r.messageCount, r.latestMessageAt, recovered);
+                if (events.length() > 0) SyncCoordinator.requestSync(this);
             }
             if (recovered) db.addIncident("ACTIVE_SNAPSHOT_RECOVERED", r.notificationKey);
         });
+    }
+
+    private static boolean isWhatsApp(String packageName) {
+        return "com.whatsapp".equals(packageName) || "com.whatsapp.w4b".equals(packageName);
     }
 
     @Override public void onDestroy() {

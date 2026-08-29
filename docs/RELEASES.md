@@ -24,7 +24,12 @@ ANDROID_KEYSTORE_BASE64
 ANDROID_KEYSTORE_PASSWORD
 ANDROID_KEY_ALIAS
 ANDROID_KEY_PASSWORD
+RADAR_DEVICE_SECRET
 ```
+
+A release conectada também exige as repository variables
+`RADAR_INGEST_ENDPOINT`, `RADAR_NETWORK_ID` e `RADAR_DEVICE_ID`. O workflow
+interrompe antes da compilação se qualquer configuração estiver ausente.
 
 `ANDROID_KEYSTORE_BASE64` deve conter o arquivo `.jks` codificado integralmente em Base64, sem quebras de linha.
 
@@ -37,8 +42,8 @@ ANDROID_KEY_PASSWORD
 Exemplo:
 
 ```bash
-git tag v0.2.1-probe
-git push origin v0.2.1-probe
+git tag v0.3.0-connected
+git push origin v0.3.0-connected
 ```
 
 O workflow valida versão e secrets, compila, verifica a assinatura e publica APK + checksum SHA-256 em uma GitHub Release.

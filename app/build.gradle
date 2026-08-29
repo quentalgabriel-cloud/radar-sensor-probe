@@ -9,6 +9,11 @@ def signingReady = [
         System.getenv('RADAR_KEY_PASSWORD')
 ].every { it != null && !it.isBlank() }
 
+def configValue = { String name ->
+    def value = System.getenv(name) ?: ''
+    return '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"'
+}
+
 android {
     namespace 'br.com.radardarede.sensor'
     compileSdk 35
@@ -17,8 +22,12 @@ android {
         applicationId 'br.com.radardarede.sensor'
         minSdk 28
         targetSdk 35
-        versionCode 3
-        versionName '0.2.1-probe'
+        versionCode 4
+        versionName '0.3.0-connected'
+        buildConfigField 'String', 'RADAR_INGEST_ENDPOINT', configValue('RADAR_INGEST_ENDPOINT')
+        buildConfigField 'String', 'RADAR_NETWORK_ID', configValue('RADAR_NETWORK_ID')
+        buildConfigField 'String', 'RADAR_DEVICE_ID', configValue('RADAR_DEVICE_ID')
+        buildConfigField 'String', 'RADAR_DEVICE_SECRET', configValue('RADAR_DEVICE_SECRET')
     }
 
     signingConfigs {
@@ -46,6 +55,10 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 }
 

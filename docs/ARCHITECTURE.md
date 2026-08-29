@@ -1,4 +1,4 @@
-# Arquitetura — Probe v0.2
+# Arquitetura — Sensor conectado v0.3
 
 ```text
 WhatsApp oficial
@@ -7,25 +7,29 @@ NotificationListenerService
       ↓
 NotificationSnapshot (imutável)
       ↓
-SQLite interno
+Parser conservador
       ↓
-Probe UI / diagnóstico
+NormalizedEvent 0.1.0
+      ↓
+Transação SQLite: snapshot + outbox
+      ↓
+HTTPS autenticado / retry idempotente
+      ↓
+Supabase ingest-events + ingest-health
 ```
 
-Próxima evolução, apenas após fixtures reais:
+Quando a build ainda não foi provisionada, o caminho termina no snapshot local,
+preservando o comportamento de diagnóstico da v0.2.1.
 
-```text
-NotificationSnapshot
-      ↓
-WhatsApp Parser
-      ↓
-Diff / Dedup
-      ↓
-NormalizedEvent
-      ↓
-Durable Outbox
-      ↓
-Supabase Ingestion
-```
+## Regras de emissão
 
-A decisão essencial é não chamar cada callback de "mensagem" antes dos testes no aparelho. A v0.2 também diferencia **captura local confirmada** de um futuro teste ponta a ponta, que só existirá depois de parser, outbox e ingestão estarem implementados.
+- somente `EXTRA_MESSAGES` com texto e timestamp válidos vira evento;
+- payload cumulativo é deduplicado por ID determinístico da evidência;
+- batch também tem ID determinístico, seguro para repetir após timeout;
+- envio HTTP 2xx marca os itens como enviados; qualquer outra resposta mantém a fila;
+- bearer pertence apenas ao device/network cadastrados e pode ser revogado;
+- heartbeat remoto informa fila, último evento e último upload a cada ciclo útil.
+
+A v0.3 diferencia **captura local**, **evento aguardando**, **sincronizado** e
+**build não provisionada**. O teste local continua local; o teste ponta a ponta
+só será confirmado quando o Supabase registrar o evento e o heartbeat do Moto.
