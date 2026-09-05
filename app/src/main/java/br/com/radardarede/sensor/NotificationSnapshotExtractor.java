@@ -2,6 +2,8 @@ package br.com.radardarede.sensor;
 
 import android.app.Notification;
 import android.app.Person;
+import android.content.LocusId;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.service.notification.StatusBarNotification;
@@ -43,6 +45,23 @@ public final class NotificationSnapshotExtractor {
             root.put("group", n.getGroup());
             root.put("sort_key", n.getSortKey());
             root.put("channel_id", n.getChannelId());
+
+            // Puramente diagnóstico: nenhuma identidade de grupo depende disto
+            // ainda. O título arrastra a contagem cumulativa de mensagens do
+            // WhatsApp e muda a cada notificação (docs/GROUP-IDENTITY-PLAN.md,
+            // etapa 4); shortcutId/LocusId são a única API do Android que
+            // promete identidade estável por conversa, independente do texto
+            // exibido, mas não há confirmação de que o WhatsApp os preenche.
+            // Esta captura existe para responder essa pergunta com dado real
+            // do aparelho antes de qualquer mudança na resolução de grupo.
+            if (Build.VERSION.SDK_INT >= 29) {
+                String shortcutId = sbn.getShortcutId();
+                if (!TextUtils.isEmpty(shortcutId)) root.put("shortcut_id", shortcutId);
+                LocusId locusId = n.getLocusId();
+                if (locusId != null && !TextUtils.isEmpty(locusId.getId())) {
+                    root.put("locus_id", locusId.getId());
+                }
+            }
 
             JSONObject extras = new JSONObject();
             putText(extras, "title", e.get(Notification.EXTRA_TITLE));

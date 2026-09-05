@@ -18,10 +18,11 @@ const database = read('app/src/main/java/br/com/radardarede/sensor/ProbeDatabase
 const sync = read('app/src/main/java/br/com/radardarede/sensor/SyncCoordinator.java');
 const config = read('app/src/main/java/br/com/radardarede/sensor/SensorConfig.java');
 const parser = read('app/src/main/java/br/com/radardarede/sensor/SnapshotEventParser.java');
+const extractor = read('app/src/main/java/br/com/radardarede/sensor/NotificationSnapshotExtractor.java');
 const releaseWorkflow = read('.github/workflows/release-apk.yml');
 
-requireMatch(gradle, /versionCode\s+4\b/, 'versionCode da v0.3 deve ser 4.');
-requireMatch(gradle, /versionName\s+'0\.3\.0-connected'/, 'versionName deve identificar a v0.3 conectada.');
+requireMatch(gradle, /versionCode\s+5\b/, 'versionCode desta build deve ser 5.');
+requireMatch(gradle, /versionName\s+'0\.3\.1-shortcut-diagnostic'/, 'versionName deve identificar o diagnóstico de shortcutId/LocusId.');
 requireMatch(gradle, /RADAR_KEYSTORE_PATH/, 'Build de release deve aceitar a chave permanente.');
 
 requireMatch(listener, /HEARTBEAT_INTERVAL_MS\s*=\s*60_000L/, 'Listener deve publicar heartbeat local a cada 60 segundos.');
@@ -39,6 +40,20 @@ requireMatch(sync, /EventIdentity\.batchId/, 'Retry deve reutilizar identidade d
 requireMatch(config, /deviceSecret\.length\(\)\s*>=\s*32/, 'Credencial de device deve exigir tamanho mínimo.');
 requireMatch(parser, /is_group_conversation[\s\S]*isGroupConversation/, 'Parser remoto deve exigir evidência explícita de grupo.');
 rejectMatch(gradle + sync + config, /service[_-]?role/i, 'APK não pode receber service role.');
+
+// Diagnóstico de shortcutId/LocusId (docs/GROUP-IDENTITY-PLAN.md, etapa 4):
+// captura, mas não decide identidade ainda — a resposta real do WhatsApp a
+// essas APIs não está confirmada, e a resolução de grupo não pode depender
+// de uma suposição.
+requireMatch(extractor, /Build\.VERSION\.SDK_INT >= 29/, 'Captura de shortcutId/LocusId precisa checar a versão do Android.');
+requireMatch(extractor, /getShortcutId/, 'Extractor deve capturar o shortcutId da notificação.');
+requireMatch(extractor, /getLocusId/, 'Extractor deve capturar o LocusId da notificação.');
+requireMatch(parser, /shortcut_id/, 'Parser deve propagar shortcut_id para o metadata do evento.');
+rejectMatch(
+  parser.slice(0, parser.indexOf('conversationId = "wa_"')),
+  /shortcutId|locusId/,
+  'shortcutId/LocusId não podem participar do cálculo de conversationId ainda — são só diagnóstico.',
+);
 
 for (const secret of [
   'ANDROID_KEYSTORE_BASE64',
