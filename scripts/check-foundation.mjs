@@ -46,7 +46,9 @@ rejectMatch(gradle + sync + config, /service[_-]?role/i, 'APK não pode receber 
 // essas APIs não está confirmada, e a resolução de grupo não pode depender
 // de uma suposição.
 requireMatch(extractor, /Build\.VERSION\.SDK_INT >= 29/, 'Captura de shortcutId/LocusId precisa checar a versão do Android.');
-requireMatch(extractor, /getShortcutId/, 'Extractor deve capturar o shortcutId da notificação.');
+// getShortcutId só existe na Ranking do listener, nunca na StatusBarNotification
+// em si -- por isso o listener resolve, não o extrator.
+requireMatch(listener, /ranking\.getShortcutId\(\)/, 'Listener deve resolver o shortcutId pela Ranking.');
 requireMatch(extractor, /getLocusId/, 'Extractor deve capturar o LocusId da notificação.');
 requireMatch(parser, /shortcut_id/, 'Parser deve propagar shortcut_id para o metadata do evento.');
 rejectMatch(

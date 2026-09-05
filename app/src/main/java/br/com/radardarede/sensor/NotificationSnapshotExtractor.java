@@ -17,7 +17,7 @@ import java.util.UUID;
 public final class NotificationSnapshotExtractor {
     private NotificationSnapshotExtractor() { }
 
-    public static Result extract(StatusBarNotification sbn) {
+    public static Result extract(StatusBarNotification sbn, String shortcutId) {
         long capturedAt = System.currentTimeMillis();
         JSONObject root = new JSONObject();
         JSONArray messages = new JSONArray();
@@ -54,8 +54,10 @@ public final class NotificationSnapshotExtractor {
             // exibido, mas não há confirmação de que o WhatsApp os preenche.
             // Esta captura existe para responder essa pergunta com dado real
             // do aparelho antes de qualquer mudança na resolução de grupo.
+            // shortcutId não é da StatusBarNotification: só existe na Ranking
+            // do NotificationListenerService, e por isso chega já resolvido
+            // pelo chamador (RadarNotificationListenerService).
             if (Build.VERSION.SDK_INT >= 29) {
-                String shortcutId = sbn.getShortcutId();
                 if (!TextUtils.isEmpty(shortcutId)) root.put("shortcut_id", shortcutId);
                 LocusId locusId = n.getLocusId();
                 if (locusId != null && !TextUtils.isEmpty(locusId.getId())) {

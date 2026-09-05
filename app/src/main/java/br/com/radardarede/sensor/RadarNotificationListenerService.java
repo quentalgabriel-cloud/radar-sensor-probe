@@ -66,8 +66,9 @@ public class RadarNotificationListenerService extends NotificationListenerServic
     }
 
     private void persist(StatusBarNotification sbn, boolean recovered) {
+        String shortcutId = lookupShortcutId(sbn);
         io.execute(() -> {
-            NotificationSnapshotExtractor.Result r = NotificationSnapshotExtractor.extract(sbn);
+            NotificationSnapshotExtractor.Result r = NotificationSnapshotExtractor.extract(sbn, shortcutId);
             ProbeDatabase db = ProbeDatabase.get(this);
             SensorConfig config = SensorConfig.current();
             HealthStore.provisioned(this, config.isProvisioned());
@@ -84,6 +85,20 @@ public class RadarNotificationListenerService extends NotificationListenerServic
             }
             if (recovered) db.addIncident("ACTIVE_SNAPSHOT_RECOVERED", r.notificationKey);
         });
+    }
+
+    // shortcutId só existe na Ranking do listener, nunca na StatusBarNotification
+    // em si -- por isso é resolvido aqui, no contexto do serviço, e passado como
+    // valor simples para o extrator, que não precisa saber de onde ele veio.
+    private String lookupShortcutId(StatusBarNotification sbn) {
+        if (android.os.Build.VERSION.SDK_INT < 29) return null;
+        try {
+            RankingMap rankingMap = getCurrentRanking();
+            if (rankingMap == null) return null;
+            Ranking ranking = new Ranking();
+            if (rankingMap.getRanking(sbn.getKey(), ranking)) return ranking.getShortcutId();
+        } catch (Exception ignored) { }
+        return null;
     }
 
     private static boolean isWhatsApp(String packageName) {
