@@ -87,16 +87,19 @@ public class RadarNotificationListenerService extends NotificationListenerServic
         });
     }
 
-    // shortcutId só existe na Ranking do listener, nunca na StatusBarNotification
-    // em si -- por isso é resolvido aqui, no contexto do serviço, e passado como
-    // valor simples para o extrator, que não precisa saber de onde ele veio.
+    // shortcutId só existe via Ranking.getConversationShortcutInfo() (API 31),
+    // nunca na StatusBarNotification em si -- por isso é resolvido aqui, no
+    // contexto do serviço, e passado como valor simples para o extrator, que
+    // não precisa saber de onde ele veio.
     private String lookupShortcutId(StatusBarNotification sbn) {
-        if (android.os.Build.VERSION.SDK_INT < 29) return null;
+        if (android.os.Build.VERSION.SDK_INT < 31) return null;
         try {
             RankingMap rankingMap = getCurrentRanking();
             if (rankingMap == null) return null;
             Ranking ranking = new Ranking();
-            if (rankingMap.getRanking(sbn.getKey(), ranking)) return ranking.getShortcutId();
+            if (!rankingMap.getRanking(sbn.getKey(), ranking)) return null;
+            android.content.pm.ShortcutInfo shortcut = ranking.getConversationShortcutInfo();
+            return shortcut == null ? null : shortcut.getId();
         } catch (Exception ignored) { }
         return null;
     }
