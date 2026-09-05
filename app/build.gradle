@@ -22,8 +22,8 @@ android {
         applicationId 'br.com.radardarede.sensor'
         minSdk 28
         targetSdk 35
-        versionCode 4
-        versionName '0.3.0-connected'
+        versionCode 5
+        versionName '0.3.1-shortcut-diagnostic'
         buildConfigField 'String', 'RADAR_INGEST_ENDPOINT', configValue('RADAR_INGEST_ENDPOINT')
         buildConfigField 'String', 'RADAR_NETWORK_ID', configValue('RADAR_NETWORK_ID')
         buildConfigField 'String', 'RADAR_DEVICE_ID', configValue('RADAR_DEVICE_ID')

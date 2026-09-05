@@ -6,7 +6,7 @@ import org.json.JSONObject;
 import java.time.Instant;
 
 public final class SnapshotEventParser {
-    public static final String VERSION = "0.3.0";
+    public static final String VERSION = "0.3.1";
     private static final long FUTURE_TOLERANCE_MS = 5L * 60L * 1000L;
 
     private SnapshotEventParser() { }
@@ -26,6 +26,10 @@ public final class SnapshotEventParser {
             if (empty(conversation) || messages == null) return events;
 
             String conversationId = "wa_" + EventIdentity.sha256(conversation).substring(0, 32);
+            // Diagnóstico apenas (ver NotificationSnapshotExtractor): não participa
+            // do cálculo de conversationId acima.
+            String shortcutId = snapshot.optString("shortcut_id", null);
+            String locusId = snapshot.optString("locus_id", null);
             for (int index = 0; index < messages.length(); index++) {
                 JSONObject message = messages.optJSONObject(index);
                 if (message == null) continue;
@@ -48,6 +52,8 @@ public final class SnapshotEventParser {
                 metadata.put("snapshot_id", snapshotId);
                 metadata.put("message_index", index);
                 metadata.put("evidence", "notification_messaging_style");
+                if (shortcutId != null) metadata.put("shortcut_id", shortcutId);
+                if (locusId != null) metadata.put("locus_id", locusId);
 
                 JSONObject event = new JSONObject();
                 event.put("schema_version", "0.1.0");
